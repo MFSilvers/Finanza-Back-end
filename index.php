@@ -57,20 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Get the request URI - handle different server configurations
-$requestUri = $_SERVER['REQUEST_URI'] ?? '/';
-$scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
-
-// Remove script path from request URI if present
-if ($scriptName !== '/index.php' && strpos($requestUri, $scriptName) === 0) {
-    $requestUri = substr($requestUri, strlen(dirname($scriptName)));
-    if ($requestUri === '') $requestUri = '/';
-}
+$requestUri = $_SERVER['REQUEST_URI'] ?? $_SERVER['REDIRECT_URL'] ?? '/';
 
 // Remove query string
 $requestUri = strtok($requestUri, '?');
 
-// Normalize path
-$path = trim($requestUri, '/');
+// Normalize path - remove leading slash
+$path = ltrim($requestUri, '/');
 
 // Health check endpoint (works without database)
 if ($path === '' || $path === 'health' || $path === 'api') {
