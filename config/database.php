@@ -9,7 +9,6 @@ class Database {
     private $conn;
 
     public function __construct() {
-        // Carica variabili d'ambiente da .env o variabili di sistema
         $this->host = getenv('DB_HOST') ?: 'localhost';
         $this->db_name = getenv('DB_NAME') ?: 'finanze_app';
         $this->username = getenv('DB_USER') ?: 'root';
@@ -21,7 +20,6 @@ class Database {
         $this->conn = null;
 
         try {
-            // Supporta sia MySQL che PostgreSQL (per Supabase)
             $db_type = getenv('DB_TYPE') ?: 'mysql';
             
             if ($db_type === 'pgsql') {

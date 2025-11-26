@@ -1,6 +1,5 @@
 <?php
 
-// Load environment variables
 require_once __DIR__ . '/load_env.php';
 
 // Simple router for API endpoints
