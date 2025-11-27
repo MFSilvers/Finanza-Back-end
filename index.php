@@ -5,12 +5,17 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 error_reporting(E_ALL);
 
+// Log request for debugging
+error_log("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
+
 // Always respond to root and health check FIRST
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
+$uri = parse_url($uri, PHP_URL_PATH);
+
 if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
     header('Content-Type: application/json');
     header('Access-Control-Allow-Origin: *');
-    echo json_encode(['status' => 'ok', 'message' => 'API is running', 'uri' => $uri]);
+    echo json_encode(['status' => 'ok', 'message' => 'API is running', 'uri' => $uri, 'method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A']);
     exit;
 }
 
