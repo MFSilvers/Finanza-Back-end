@@ -26,6 +26,25 @@ if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
     exit;
 }
 
+if ($uri === '/test' || $uri === '/api/test') {
+    error_log("Index: Test endpoint");
+    header('Content-Type: application/json');
+    header('Access-Control-Allow-Origin: *');
+    $response = [
+        'status' => 'ok',
+        'message' => 'Test endpoint works',
+        'method' => $method,
+        'uri' => $uri,
+        'headers' => [
+            'origin' => $_SERVER['HTTP_ORIGIN'] ?? 'N/A',
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'N/A'
+        ],
+        'timestamp' => date('Y-m-d H:i:s')
+    ];
+    echo json_encode($response);
+    exit;
+}
+
 @require_once __DIR__ . '/load_env.php';
 
 $path = trim(parse_url($uri, PHP_URL_PATH), '/');
