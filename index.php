@@ -32,9 +32,20 @@ $path = trim(parse_url($uri, PHP_URL_PATH), '/');
 
 error_log("Index: Routing path: {$path}");
 
+if ($method === 'OPTIONS') {
+    error_log("Index: Handling OPTIONS preflight");
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    header('Access-Control-Max-Age: 3600');
+    http_response_code(200);
+    exit;
+}
+
 try {
     if (strpos($path, 'api/auth') === 0) {
-        $subPath = substr($path, 8) ?: '/';
+        $subPath = substr($path, 8);
+        if ($subPath === '') $subPath = '/';
         $_SERVER['PATH_INFO'] = $subPath;
         error_log("Index: Routing to api/auth.php with PATH_INFO: {$subPath}");
         if (file_exists(__DIR__ . '/api/auth.php')) {
@@ -46,7 +57,8 @@ try {
             exit;
         }
     } elseif (strpos($path, 'api/categories') === 0) {
-        $subPath = substr($path, 14) ?: '/';
+        $subPath = substr($path, 14);
+        if ($subPath === '') $subPath = '/';
         $_SERVER['PATH_INFO'] = $subPath;
         error_log("Index: Routing to api/categories.php with PATH_INFO: {$subPath}");
         if (file_exists(__DIR__ . '/api/categories.php')) {
@@ -58,7 +70,8 @@ try {
             exit;
         }
     } elseif (strpos($path, 'api/transactions') === 0) {
-        $subPath = substr($path, 16) ?: '/';
+        $subPath = substr($path, 16);
+        if ($subPath === '') $subPath = '/';
         $_SERVER['PATH_INFO'] = $subPath;
         error_log("Index: Routing to api/transactions.php with PATH_INFO: {$subPath}");
         if (file_exists(__DIR__ . '/api/transactions.php')) {
@@ -70,7 +83,8 @@ try {
             exit;
         }
     } elseif (strpos($path, 'api/statistics') === 0) {
-        $subPath = substr($path, 14) ?: '/';
+        $subPath = substr($path, 14);
+        if ($subPath === '') $subPath = '/';
         $_SERVER['PATH_INFO'] = $subPath;
         error_log("Index: Routing to api/statistics.php with PATH_INFO: {$subPath}");
         if (file_exists(__DIR__ . '/api/statistics.php')) {
