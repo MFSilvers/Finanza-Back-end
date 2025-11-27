@@ -1,7 +1,7 @@
 <?php
 
-$request_uri = $_SERVER['REQUEST_URI'];
-$request_path = parse_url($request_uri, PHP_URL_PATH);
+$request_uri = $_SERVER['REQUEST_URI'] ?? '/';
+$request_path = parse_url($request_uri, PHP_URL_PATH) ?: '/';
 
 if (preg_match('/\.php$/', $request_path)) {
     $file_path = __DIR__ . $request_path;
