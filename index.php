@@ -10,12 +10,19 @@ error_log("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
 
 // Always respond to root and health check FIRST
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
-$uri = parse_url($uri, PHP_URL_PATH);
+$uri = parse_url($uri, PHP_URL_PATH) ?: '/';
 
+// Health check endpoint
 if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
     header('Content-Type: application/json');
     header('Access-Control-Allow-Origin: *');
-    echo json_encode(['status' => 'ok', 'message' => 'API is running', 'uri' => $uri, 'method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A']);
+    echo json_encode([
+        'status' => 'ok', 
+        'message' => 'API is running', 
+        'uri' => $uri, 
+        'method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A',
+        'php_version' => PHP_VERSION
+    ]);
     exit;
 }
 
