@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["php83"]
+
+[phases.install]
+cmds = []
+
+[phases.build]
+cmds = []
+
+[start]
+cmd = "php -S 0.0.0.0:$PORT server.php"
+
