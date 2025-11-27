@@ -30,15 +30,20 @@ if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
 
 $path = trim(parse_url($uri, PHP_URL_PATH), '/');
 
-error_log("Index: Routing path: {$path}");
+error_log("Index: Routing path: '{$path}', method: '{$method}'");
+error_log("Index: Full REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
+error_log("Index: HTTP_ORIGIN: " . ($_SERVER['HTTP_ORIGIN'] ?? 'N/A'));
 
 if ($method === 'OPTIONS') {
-    error_log("Index: Handling OPTIONS preflight");
-    header('Access-Control-Allow-Origin: *');
+    error_log("Index: Handling OPTIONS preflight for path: '{$path}'");
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+    header('Access-Control-Allow-Origin: ' . $origin);
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    header('Access-Control-Allow-Credentials: true');
     header('Access-Control-Max-Age: 3600');
     http_response_code(200);
+    error_log("Index: OPTIONS response sent");
     exit;
 }
 
