@@ -18,25 +18,15 @@ register_shutdown_function(function() {
     }
 });
 
+// Load helpers to use setCorsHeaders function
+require_once __DIR__ . '/utils/helpers.php';
+
+// Set CORS headers early - this handles OPTIONS preflight requests
+setCorsHeaders();
+
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $uri = parse_url($uri, PHP_URL_PATH) ?: '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
-
-if ($origin !== '*') {
-    header('Access-Control-Allow-Origin: ' . $origin);
-    header('Access-Control-Allow-Credentials: true');
-} else {
-    header('Access-Control-Allow-Origin: *');
-}
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-header('Access-Control-Max-Age: 3600');
-
-if ($method === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
 
 if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
     error_log("Index: Health check endpoint");
@@ -78,18 +68,7 @@ error_log("Index: Routing path: '{$path}', method: '{$method}'");
 error_log("Index: Full REQUEST_URI: " . ($_SERVER['REQUEST_URI'] ?? 'N/A'));
 error_log("Index: HTTP_ORIGIN: " . ($_SERVER['HTTP_ORIGIN'] ?? 'N/A'));
 
-if ($method === 'OPTIONS') {
-    error_log("Index: Handling OPTIONS preflight for path: '{$path}'");
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
-    header('Access-Control-Allow-Origin: ' . $origin);
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-    header('Access-Control-Allow-Credentials: true');
-    header('Access-Control-Max-Age: 3600');
-    http_response_code(200);
-    error_log("Index: OPTIONS response sent");
-    exit;
-}
+// OPTIONS requests are already handled by setCorsHeaders() above
 
 try {
     if (strpos($path, 'api/auth') === 0) {
