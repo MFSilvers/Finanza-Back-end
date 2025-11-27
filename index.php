@@ -12,7 +12,6 @@ error_log("Index: Processing {$method} {$uri}");
 if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
     error_log("Index: Health check endpoint");
     header('Content-Type: application/json');
-    header('Access-Control-Allow-Origin: *');
     $response = [
         'status' => 'ok', 
         'message' => 'API is running', 
@@ -29,7 +28,6 @@ if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
 if ($uri === '/test' || $uri === '/api/test') {
     error_log("Index: Test endpoint");
     header('Content-Type: application/json');
-    header('Access-Control-Allow-Origin: *');
     $response = [
         'status' => 'ok',
         'message' => 'Test endpoint works',
@@ -41,6 +39,7 @@ if ($uri === '/test' || $uri === '/api/test') {
         ],
         'timestamp' => date('Y-m-d H:i:s')
     ];
+    error_log("Index: Test response: " . json_encode($response));
     echo json_encode($response);
     exit;
 }
