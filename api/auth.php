@@ -7,8 +7,15 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 setCorsHeaders();
 
-$database = new Database();
-$db = $database->getConnection();
+try {
+    $database = new Database();
+    $db = $database->getConnection();
+} catch (Exception $e) {
+    error_log("Auth: Database connection failed - " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Database connection error. Please check server configuration.']);
+    exit;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $path = $_SERVER['PATH_INFO'] ?? '/';

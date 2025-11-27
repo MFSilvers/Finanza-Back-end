@@ -13,7 +13,10 @@ class Database {
         $this->db_name = getenv('DB_NAME') ?: 'finanze_app';
         $this->username = getenv('DB_USER') ?: 'root';
         $this->password = getenv('DB_PASSWORD') ?: '';
-        $this->port = getenv('DB_PORT') ?: '3306';
+        
+        // Set default port based on DB_TYPE
+        $db_type = getenv('DB_TYPE') ?: 'mysql';
+        $this->port = getenv('DB_PORT') ?: ($db_type === 'pgsql' || $db_type === 'postgres' ? '5432' : '3306');
     }
 
     public function getConnection() {
@@ -22,7 +25,16 @@ class Database {
         try {
             $db_type = getenv('DB_TYPE') ?: 'mysql';
             
+            // Normalize PostgreSQL type names
+            if ($db_type === 'postgres' || $db_type === 'postgresql') {
+                $db_type = 'pgsql';
+            }
+            
+            // Log connection attempt (without sensitive data)
+            error_log("Database: Attempting connection - Type: {$db_type}, Host: {$this->host}, Port: {$this->port}, DB: {$this->db_name}, User: {$this->username}");
+            
             if ($db_type === 'pgsql') {
+                // Supabase requires SSL connection
                 $dsn = "pgsql:host=" . $this->host . 
                        ";port=" . $this->port . 
                        ";dbname=" . $this->db_name . 
@@ -40,12 +52,23 @@ class Database {
                 $this->password,
                 [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_TIMEOUT => 5
                 ]
             );
+            
+            error_log("Database: Connection successful");
         } catch(PDOException $e) {
-            error_log("Database Connection Error: " . $e->getMessage());
-            throw new Exception("Errore di connessione al database");
+            $errorMsg = "Database Connection Error: " . $e->getMessage();
+            error_log($errorMsg);
+            error_log("Database: Connection details - Host: {$this->host}, Port: {$this->port}, DB: {$this->db_name}, User: {$this->username}");
+            
+            // In production, don't expose full error details
+            if (getenv('APP_ENV') === 'development') {
+                throw new Exception("Errore di connessione al database: " . $e->getMessage());
+            } else {
+                throw new Exception("Errore di connessione al database");
+            }
         }
 
         return $this->conn;

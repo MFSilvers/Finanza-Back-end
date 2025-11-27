@@ -267,8 +267,14 @@ function generateRecurringInstances($db, $transactionId, $startDate, $recurringR
         $instances[] = [$transactionId, $date->format('Y-m-d')];
     }
     
-    $stmt = $db->prepare("INSERT IGNORE INTO recurring_instances (transaction_id, occurrence_date) VALUES (?, ?)");
+    // Use database-agnostic approach: check if exists before insert
+    $checkStmt = $db->prepare("SELECT id FROM recurring_instances WHERE transaction_id = ? AND occurrence_date = ?");
+    $insertStmt = $db->prepare("INSERT INTO recurring_instances (transaction_id, occurrence_date) VALUES (?, ?)");
+    
     foreach ($instances as $instance) {
-        $stmt->execute($instance);
+        $checkStmt->execute($instance);
+        if (!$checkStmt->fetch()) {
+            $insertStmt->execute($instance);
+        }
     }
 }
