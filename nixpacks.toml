@@ -8,5 +8,5 @@ cmds = ["mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx"]
 cmds = []
 
 [start]
-cmd = "nginx -c /app/nginx.conf && php-fpm -y /app/php-fpm.conf"
+cmd = "php-fpm -y /app/php-fpm.conf && nginx -c /app/nginx.conf -g 'daemon off;'"
 
