@@ -3,11 +3,26 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 error_reporting(E_ALL);
 
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
+    return false;
+});
+
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== NULL && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE])) {
+        error_log("Fatal error: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
+        http_response_code(500);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Internal server error']);
+    }
+});
+
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $uri = parse_url($uri, PHP_URL_PATH) ?: '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-error_log("Index: Processing {$method} {$uri}");
+@error_log("Index: Processing {$method} {$uri}");
 
 if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
     error_log("Index: Health check endpoint");
@@ -26,22 +41,29 @@ if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
 }
 
 if ($uri === '/test' || $uri === '/api/test') {
-    error_log("Index: Test endpoint");
+    @error_log("Index: Test endpoint");
     header('Content-Type: application/json');
-    $response = [
-        'status' => 'ok',
-        'message' => 'Test endpoint works',
-        'method' => $method,
-        'uri' => $uri,
-        'headers' => [
-            'origin' => $_SERVER['HTTP_ORIGIN'] ?? 'N/A',
-            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'N/A'
-        ],
-        'timestamp' => date('Y-m-d H:i:s')
-    ];
-    error_log("Index: Test response: " . json_encode($response));
-    echo json_encode($response);
-    exit;
+    try {
+        $response = [
+            'status' => 'ok',
+            'message' => 'Test endpoint works',
+            'method' => $method,
+            'uri' => $uri,
+            'headers' => [
+                'origin' => $_SERVER['HTTP_ORIGIN'] ?? 'N/A',
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'N/A'
+            ],
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+        @error_log("Index: Test response: " . json_encode($response));
+        echo json_encode($response);
+        exit;
+    } catch (Throwable $e) {
+        @error_log("Index: Test endpoint error: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['error' => 'Test endpoint error', 'message' => $e->getMessage()]);
+        exit;
+    }
 }
 
 @require_once __DIR__ . '/load_env.php';
