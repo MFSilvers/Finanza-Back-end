@@ -40,8 +40,8 @@ if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
     exit;
 }
 
-if ($uri === '/test' || $uri === '/api/test') {
-    error_log("Index: Test endpoint");
+if ($uri === '/test') {
+    error_log("Index: Test endpoint matched");
     header('Content-Type: application/json');
     $response = [
         'status' => 'ok',
