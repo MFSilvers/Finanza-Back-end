@@ -1,0 +1,11 @@
+{
+    auto_https off
+}
+
+:{$PORT:8080} {
+    root * /app
+    file_server
+    try_files {path} /index.php
+    php_server
+}
+

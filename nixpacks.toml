@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["php83", "nginx", "php83Packages.composer"]
+
+[phases.install]
+cmds = ["mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx"]
+
+[phases.build]
+cmds = []
+
+[start]
+cmd = "nginx -c /app/nginx.conf && php-fpm -y /app/php-fpm.conf"
+
