@@ -21,8 +21,22 @@ register_shutdown_function(function() {
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $uri = parse_url($uri, PHP_URL_PATH) ?: '/';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
 
-@error_log("Index: Processing {$method} {$uri}");
+if ($origin !== '*') {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Credentials: true');
+} else {
+    header('Access-Control-Allow-Origin: *');
+}
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Max-Age: 3600');
+
+if ($method === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
 if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
     error_log("Index: Health check endpoint");

@@ -1,12 +1,12 @@
 [phases.setup]
-nixPkgs = ["php83"]
+nixPkgs = ["php83", "nginx", "php83Packages.composer"]
 
 [phases.install]
-cmds = []
+cmds = ["mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx"]
 
 [phases.build]
 cmds = []
 
 [start]
-cmd = "php -S 0.0.0.0:$PORT server.php"
+cmd = "./start.sh"
 
