@@ -34,11 +34,24 @@ class Database {
             error_log("Database: Attempting connection - Type: {$db_type}, Host: {$this->host}, Port: {$this->port}, DB: {$this->db_name}, User: {$this->username}");
             
             if ($db_type === 'pgsql') {
-                // Supabase requires SSL connection
-                $dsn = "pgsql:host=" . $this->host . 
+               
+                $sslmode = ($this->port == '6543') ? 'prefer' : 'require';
+                
+                // Try to resolve host to IPv4 if possible (helps with Railway IPv6 issues)
+                $resolvedHost = $this->host;
+                if (filter_var($this->host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) === false) {
+                    
+                    $ip = gethostbyname($this->host);
+                    if ($ip !== $this->host && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                        $resolvedHost = $ip;
+                        error_log("Database: Resolved host to IPv4: {$resolvedHost}");
+                    }
+                }
+                
+                $dsn = "pgsql:host=" . $resolvedHost . 
                        ";port=" . $this->port . 
                        ";dbname=" . $this->db_name . 
-                       ";sslmode=require";
+                       ";sslmode=" . $sslmode;
             } else {
                 $dsn = "mysql:host=" . $this->host . 
                        ";port=" . $this->port . 

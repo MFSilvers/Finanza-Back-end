@@ -62,28 +62,58 @@ $stmt->execute($params);
 $incomeByCategory = $stmt->fetchAll();
 
 // Monthly trends (last 12 months or filtered period)
-if (!$startDate || !$endDate) {
-    $monthsQuery = "SELECT 
-        DATE_FORMAT(date, '%Y-%m') as month,
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
-        FROM transactions
-        WHERE user_id = ? AND date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-        GROUP BY month
-        ORDER BY month ASC";
-    $stmt = $db->prepare($monthsQuery);
-    $stmt->execute([$userId]);
+// Detect database type for SQL compatibility
+$dbType = getenv('DB_TYPE') ?: 'mysql';
+if ($dbType === 'pgsql' || $dbType === 'postgres' || $dbType === 'postgresql') {
+    // PostgreSQL syntax
+    if (!$startDate || !$endDate) {
+        $monthsQuery = "SELECT 
+            TO_CHAR(date, 'YYYY-MM') as month,
+            SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+            SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+            FROM transactions
+            WHERE user_id = ? AND date >= (CURRENT_DATE - INTERVAL '12 months')
+            GROUP BY TO_CHAR(date, 'YYYY-MM')
+            ORDER BY month ASC";
+        $stmt = $db->prepare($monthsQuery);
+        $stmt->execute([$userId]);
+    } else {
+        $monthsQuery = "SELECT 
+            TO_CHAR(date, 'YYYY-MM') as month,
+            SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+            SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+            FROM transactions
+            WHERE user_id = ? AND date BETWEEN ? AND ?
+            GROUP BY TO_CHAR(date, 'YYYY-MM')
+            ORDER BY month ASC";
+        $stmt = $db->prepare($monthsQuery);
+        $stmt->execute([$userId, $startDate, $endDate]);
+    }
 } else {
-    $monthsQuery = "SELECT 
-        DATE_FORMAT(date, '%Y-%m') as month,
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
-        FROM transactions
-        WHERE user_id = ? AND date BETWEEN ? AND ?
-        GROUP BY month
-        ORDER BY month ASC";
-    $stmt = $db->prepare($monthsQuery);
-    $stmt->execute([$userId, $startDate, $endDate]);
+    // MySQL syntax
+    if (!$startDate || !$endDate) {
+        $monthsQuery = "SELECT 
+            DATE_FORMAT(date, '%Y-%m') as month,
+            SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+            SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+            FROM transactions
+            WHERE user_id = ? AND date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+            GROUP BY month
+            ORDER BY month ASC";
+        $stmt = $db->prepare($monthsQuery);
+        $stmt->execute([$userId]);
+    } else {
+        $monthsQuery = "SELECT 
+            DATE_FORMAT(date, '%Y-%m') as month,
+            SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
+            SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense
+            FROM transactions
+            WHERE user_id = ? AND date BETWEEN ? AND ?
+            GROUP BY month
+            ORDER BY month ASC";
+        $stmt = $db->prepare($monthsQuery);
+        $stmt->execute([$userId, $startDate, $endDate]);
+    }
 }
 $monthlyTrends = $stmt->fetchAll();
 
