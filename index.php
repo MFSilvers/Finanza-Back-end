@@ -19,10 +19,31 @@ register_shutdown_function(function() {
 });
 
 // Load helpers to use setCorsHeaders function
-require_once __DIR__ . '/utils/helpers.php';
+try {
+    require_once __DIR__ . '/utils/helpers.php';
+} catch (Throwable $e) {
+    error_log("Index: ERROR loading helpers.php - " . $e->getMessage());
+    http_response_code(500);
+    header('Content-Type: application/json');
+    header('Access-Control-Allow-Origin: *');
+    echo json_encode(['error' => 'Server configuration error']);
+    exit;
+}
 
 // Set CORS headers early - this handles OPTIONS preflight requests
-setCorsHeaders();
+try {
+    setCorsHeaders();
+} catch (Throwable $e) {
+    error_log("Index: ERROR in setCorsHeaders() - " . $e->getMessage());
+    // Fallback CORS headers
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+        http_response_code(200);
+        exit;
+    }
+}
 
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $uri = parse_url($uri, PHP_URL_PATH) ?: '/';

@@ -8,7 +8,8 @@ function setCorsHeaders() {
     ];
     
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    $isOptions = $_SERVER['REQUEST_METHOD'] === 'OPTIONS';
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    $isOptions = $method === 'OPTIONS';
     
     // If origin is in allowed list, use it. Otherwise, don't set origin header
     // (browsers will reject if credentials=true and origin=*)
@@ -29,7 +30,16 @@ function setCorsHeaders() {
     
     // Handle preflight OPTIONS request
     if ($isOptions) {
+        error_log("setCorsHeaders: Handling OPTIONS preflight request");
         http_response_code(200);
+        // Clean any output buffers if they exist
+        if (function_exists('ob_get_level')) {
+            $level = @ob_get_level();
+            while ($level > 0) {
+                @ob_end_clean();
+                $level = @ob_get_level();
+            }
+        }
         exit();
     }
     
