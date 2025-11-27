@@ -11,13 +11,9 @@ if (preg_match('/\.php$/', $request_path)) {
     }
 }
 
-if ($request_path === '/' || $request_path === '') {
-    require __DIR__ . '/index.php';
-} elseif (file_exists(__DIR__ . $request_path)) {
+if (file_exists(__DIR__ . $request_path) && !is_dir(__DIR__ . $request_path)) {
     return false;
-} else {
-    http_response_code(404);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Not found']);
 }
+
+require __DIR__ . '/index.php';
 
