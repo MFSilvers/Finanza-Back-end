@@ -2,7 +2,7 @@
 nixPkgs = ["php83", "nginx", "php83Packages.composer"]
 
 [phases.install]
-cmds = ["mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx", "chmod +x start.sh"]
+cmds = ["mkdir -p /var/log/nginx && mkdir -p /var/cache/nginx", "chmod +x start.sh", "id -u nginx >/dev/null 2>&1 || useradd -r -s /bin/false nginx || true"]
 
 [phases.build]
 cmds = []
