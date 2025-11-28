@@ -18,7 +18,7 @@ register_shutdown_function(function() {
     }
 });
 
-// Load helpers to use setCorsHeaders function
+// Load helpers to use setCorsHeaders and validateOrigin functions
 try {
     require_once __DIR__ . '/utils/helpers.php';
 } catch (Throwable $e) {
@@ -30,13 +30,37 @@ try {
     exit;
 }
 
+// Validate origin before processing request (except health check)
+$uri = $_SERVER['REQUEST_URI'] ?? '/';
+$uri = parse_url($uri, PHP_URL_PATH) ?: '/';
+if ($uri !== '/' && $uri !== '/health' && strpos($uri, '/health') !== 0) {
+    // Validate origin for all API requests
+    if (!validateOrigin()) {
+        http_response_code(403);
+        header("Content-Type: application/json");
+        echo json_encode(['error' => 'Access denied. This API can only be accessed from the authorized frontend.']);
+        exit;
+    }
+}
+
 // Set CORS headers early - this handles OPTIONS preflight requests
 try {
     setCorsHeaders();
 } catch (Throwable $e) {
     error_log("Index: ERROR in setCorsHeaders() - " . $e->getMessage());
-    // Fallback CORS headers
-    header('Access-Control-Allow-Origin: *');
+    // For errors, still validate origin
+    if (!validateOrigin()) {
+        http_response_code(403);
+        header("Content-Type: application/json");
+        echo json_encode(['error' => 'Access denied.']);
+        exit;
+    }
+    // Fallback CORS headers only for valid origins
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    $allowedOrigins = ['https://finanza-flax.vercel.app'];
+    if (in_array($origin, $allowedOrigins)) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+    }
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
@@ -45,22 +69,18 @@ try {
     }
 }
 
-$uri = $_SERVER['REQUEST_URI'] ?? '/';
-$uri = parse_url($uri, PHP_URL_PATH) ?: '/';
+// URI already parsed above for origin validation
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
+    // Health check endpoint - minimal information for security
+    // Railway uses this for monitoring, so we keep it public but minimal
     error_log("Index: Health check endpoint");
     header('Content-Type: application/json');
     $response = [
-        'status' => 'ok', 
-        'message' => 'API is running', 
-        'uri' => $uri, 
-        'method' => $method,
-        'php_version' => PHP_VERSION,
-        'timestamp' => date('Y-m-d H:i:s')
+        'status' => 'ok'
     ];
-    error_log("Index: Sending response: " . json_encode($response));
+    error_log("Index: Sending health check response");
     echo json_encode($response);
     exit;
 }
