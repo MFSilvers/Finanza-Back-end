@@ -9,10 +9,14 @@ class Database {
     private $conn;
 
     public function __construct() {
-        $this->host = getenv('DB_HOST') ?: 'localhost';
-        $this->db_name = getenv('DB_NAME') ?: 'finanze_app';
-        $this->username = getenv('DB_USER') ?: 'root';
-        $this->password = getenv('DB_PASSWORD') ?: '';
+        $this->host = getenv('DB_HOST');
+        $this->db_name = getenv('DB_NAME');
+        $this->username = getenv('DB_USER');
+        $this->password = getenv('DB_PASSWORD');
+        
+        if (empty($this->host) || empty($this->db_name) || empty($this->username)) {
+            throw new Exception('Database configuration incomplete. Please set DB_HOST, DB_NAME, and DB_USER environment variables.');
+        }
         
         // Set default port based on DB_TYPE
         $db_type = getenv('DB_TYPE') ?: 'mysql';

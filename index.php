@@ -57,7 +57,15 @@ try {
     }
     // Fallback CORS headers only for valid origins
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    $allowedOrigins = ['https://finanza-flax.vercel.app'];
+    $envOrigins = getenv('ALLOWED_ORIGINS');
+    if (empty($envOrigins)) {
+        error_log("Security: ALLOWED_ORIGINS not configured in index.php fallback.");
+        http_response_code(500);
+        header("Content-Type: application/json");
+        echo json_encode(['error' => 'Server configuration error']);
+        exit();
+    }
+    $allowedOrigins = array_map('trim', explode(',', $envOrigins));
     if (in_array($origin, $allowedOrigins)) {
         header('Access-Control-Allow-Origin: ' . $origin);
     }

@@ -77,6 +77,9 @@ if ($method === 'POST' && $path === '/register') {
         
         $token = JWT::encode($payload);
         
+        // Send welcome email (non-blocking - don't fail registration if email fails)
+        sendWelcomeEmail($data['email'], $data['name']);
+        
         sendJsonResponse([
             'message' => 'User registered successfully',
             'token' => $token,
