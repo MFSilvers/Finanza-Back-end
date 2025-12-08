@@ -2,7 +2,7 @@
 nixPkgs = ["php83", "php83Packages.composer"]
 
 [phases.install]
-cmds = ["chmod +x start.sh"]
+cmds = ["chmod +x start.sh", "composer install --no-dev --optimize-autoloader"]
 
 [phases.build]
 cmds = []
