@@ -190,9 +190,9 @@ try {
         }
     } elseif (strpos($path, 'api/verify-code') === 0) {
         $subPath = substr($path, 14);
-        if ($subPath === '') $subPath = '/';
+        if ($subPath === '' || $subPath === 'verify-code') $subPath = '/';
         $_SERVER['PATH_INFO'] = $subPath;
-        error_log("Index: Routing to api/verify-code.php with PATH_INFO: {$subPath}");
+        error_log("Index: Routing to api/verify-code.php with PATH_INFO: {$subPath}, original path: {$path}");
         if (file_exists(__DIR__ . '/api/verify-code.php')) {
             require __DIR__ . '/api/verify-code.php';
         } else {
@@ -203,9 +203,9 @@ try {
         }
     } elseif (strpos($path, 'api/resend-code') === 0) {
         $subPath = substr($path, 14);
-        if ($subPath === '') $subPath = '/';
+        if ($subPath === '' || $subPath === 'resend-code') $subPath = '/';
         $_SERVER['PATH_INFO'] = $subPath;
-        error_log("Index: Routing to api/resend-code.php with PATH_INFO: {$subPath}");
+        error_log("Index: Routing to api/resend-code.php with PATH_INFO: {$subPath}, original path: {$path}");
         if (file_exists(__DIR__ . '/api/resend-code.php')) {
             require __DIR__ . '/api/resend-code.php';
         } else {

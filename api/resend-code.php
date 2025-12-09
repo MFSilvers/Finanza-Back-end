@@ -19,7 +19,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $path = $_SERVER['PATH_INFO'] ?? '/';
 
 // POST /api/resend-code
-if ($method === 'POST' && $path === '/') {
+if ($method === 'POST' && ($path === '/' || $path === '')) {
     $data = getJsonInput();
     
     validateRequired($data, ['email']);
