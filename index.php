@@ -188,28 +188,28 @@ try {
             echo json_encode(['error' => 'statistics.php not found']);
             exit;
         }
-    } elseif (strpos($path, 'api/verify-code') === 0) {
-        $subPath = substr($path, 14);
+    } elseif ($path === 'api/verify-code' || strpos($path, 'api/verify-code') === 0) {
+        $subPath = ($path === 'api/verify-code') ? '/' : substr($path, 14);
         if ($subPath === '' || $subPath === 'verify-code') $subPath = '/';
         $_SERVER['PATH_INFO'] = $subPath;
         error_log("Index: Routing to api/verify-code.php with PATH_INFO: {$subPath}, original path: {$path}");
         if (file_exists(__DIR__ . '/api/verify-code.php')) {
             require __DIR__ . '/api/verify-code.php';
         } else {
-            error_log("Index: ERROR - verify-code.php not found");
+            error_log("Index: ERROR - verify-code.php not found at: " . __DIR__ . '/api/verify-code.php');
             http_response_code(500);
             echo json_encode(['error' => 'verify-code.php not found']);
             exit;
         }
-    } elseif (strpos($path, 'api/resend-code') === 0) {
-        $subPath = substr($path, 14);
+    } elseif ($path === 'api/resend-code' || strpos($path, 'api/resend-code') === 0) {
+        $subPath = ($path === 'api/resend-code') ? '/' : substr($path, 14);
         if ($subPath === '' || $subPath === 'resend-code') $subPath = '/';
         $_SERVER['PATH_INFO'] = $subPath;
         error_log("Index: Routing to api/resend-code.php with PATH_INFO: {$subPath}, original path: {$path}");
         if (file_exists(__DIR__ . '/api/resend-code.php')) {
             require __DIR__ . '/api/resend-code.php';
         } else {
-            error_log("Index: ERROR - resend-code.php not found");
+            error_log("Index: ERROR - resend-code.php not found at: " . __DIR__ . '/api/resend-code.php');
             http_response_code(500);
             echo json_encode(['error' => 'resend-code.php not found']);
             exit;
