@@ -70,15 +70,8 @@ if ($method === 'POST' && ($path === '/' || $path === '')) {
         sendError('Verification code has expired. Please request a new code.', 400);
     }
     
-    // Verify email
-    $dbType = getenv('DB_TYPE') ?: 'mysql';
-    if ($dbType === 'pgsql' || $dbType === 'postgres') {
-        // PostgreSQL - use boolean true
-        $stmt = $db->prepare("UPDATE users SET email_verified = true, email_code = NULL, email_code_expires_at = NULL WHERE id = ?");
-    } else {
-        // MySQL - use integer 1
-        $stmt = $db->prepare("UPDATE users SET email_verified = 1, email_code = NULL, email_code_expires_at = NULL WHERE id = ?");
-    }
+    // Verify email - use 1 for both MySQL and PostgreSQL (SMALLINT)
+    $stmt = $db->prepare("UPDATE users SET email_verified = 1, email_code = NULL, email_code_expires_at = NULL WHERE id = ?");
     $stmt->execute([$user['id']]);
     
     error_log("Verify Code: Email verified successfully for {$email}");

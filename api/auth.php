@@ -48,9 +48,9 @@ if ($method === 'POST' && $path === '/register') {
     // Calculate expiration time (10 minutes from now)
     $dbType = getenv('DB_TYPE') ?: 'mysql';
     if ($dbType === 'pgsql' || $dbType === 'postgres') {
-        // PostgreSQL - use boolean false
+        // PostgreSQL - use SMALLINT 0 (not boolean)
         $expiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
-        $stmt = $db->prepare("INSERT INTO users (email, password_hash, name, email_code, email_verified, email_code_expires_at) VALUES (?, ?, ?, ?, false, ?)");
+        $stmt = $db->prepare("INSERT INTO users (email, password_hash, name, email_code, email_verified, email_code_expires_at) VALUES (?, ?, ?, ?, 0, ?)");
         $stmt->execute([$data['email'], $passwordHash, $data['name'], $verificationCode, $expiresAt]);
     } else {
         // MySQL - use integer 0
