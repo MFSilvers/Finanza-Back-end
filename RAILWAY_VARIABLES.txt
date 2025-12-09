@@ -1,0 +1,30 @@
+# ============================================
+# VARIABILI D'AMBIENTE PER RAILWAY
+# Copia e incolla queste variabili in Railway
+# ============================================
+
+# DATABASE (Railway fornisce queste automaticamente se usi Railway Database)
+# Se usi un database esterno, inserisci i tuoi valori
+DB_HOST=your-database-host.railway.app
+DB_NAME=your-database-name
+DB_USER=your-database-user
+DB_PASSWORD=your-database-password
+DB_TYPE=mysql
+DB_PORT=3306
+
+# JWT SECRET KEY (genera una stringa casuale sicura)
+# Esegui: openssl rand -base64 32
+JWT_SECRET_KEY=your-secret-key-here-minimum-32-characters
+
+# BREVO API - EMAIL (dalla cartella test email copia)
+BREVO_API_KEY=la_tua_api_key_brevo
+BREVO_SENDER_EMAIL=la_tua_email@example.com
+BREVO_SENDER_NAME=Finanza App
+
+# CORS - Dominio del frontend (Vercel)
+ALLOWED_ORIGINS=https://finanza-flax.vercel.app
+
+# AMBIENTE
+APP_ENV=production
+
+

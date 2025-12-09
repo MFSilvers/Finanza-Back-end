@@ -48,32 +48,48 @@ try {
     setCorsHeaders();
 } catch (Throwable $e) {
     error_log("Index: ERROR in setCorsHeaders() - " . $e->getMessage());
-    // For errors, still validate origin
-    if (!validateOrigin()) {
-        http_response_code(403);
-        header("Content-Type: application/json");
-        echo json_encode(['error' => 'Access denied.']);
-        exit;
-    }
-    // Fallback CORS headers only for valid origins
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    $envOrigins = getenv('ALLOWED_ORIGINS');
-    if (empty($envOrigins)) {
-        error_log("Security: ALLOWED_ORIGINS not configured in index.php fallback.");
-        http_response_code(500);
-        header("Content-Type: application/json");
-        echo json_encode(['error' => 'Server configuration error']);
-        exit();
-    }
-    $allowedOrigins = array_map('trim', explode(',', $envOrigins));
-    if (in_array($origin, $allowedOrigins)) {
-        header('Access-Control-Allow-Origin: ' . $origin);
-    }
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
-        http_response_code(200);
-        exit;
+    
+    // Allow health check even if CORS fails
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $uri = parse_url($uri, PHP_URL_PATH) ?: '/';
+    $isHealthCheck = ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0);
+    
+    if ($isHealthCheck) {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+            http_response_code(200);
+            exit;
+        }
+    } else {
+        // For non-health-check endpoints, validate origin
+        if (!validateOrigin()) {
+            http_response_code(403);
+            header("Content-Type: application/json");
+            echo json_encode(['error' => 'Access denied.']);
+            exit;
+        }
+        // Fallback CORS headers only for valid origins
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        $envOrigins = getenv('ALLOWED_ORIGINS');
+        if (empty($envOrigins)) {
+            error_log("Security: ALLOWED_ORIGINS not configured in index.php fallback.");
+            http_response_code(500);
+            header("Content-Type: application/json");
+            echo json_encode(['error' => 'Server configuration error: ALLOWED_ORIGINS not set']);
+            exit();
+        }
+        $allowedOrigins = array_map('trim', explode(',', $envOrigins));
+        if (in_array($origin, $allowedOrigins)) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+        }
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+            http_response_code(200);
+            exit;
+        }
     }
 }
 
@@ -170,6 +186,32 @@ try {
             error_log("Index: ERROR - statistics.php not found");
             http_response_code(500);
             echo json_encode(['error' => 'statistics.php not found']);
+            exit;
+        }
+    } elseif (strpos($path, 'api/verify-code') === 0) {
+        $subPath = substr($path, 14);
+        if ($subPath === '') $subPath = '/';
+        $_SERVER['PATH_INFO'] = $subPath;
+        error_log("Index: Routing to api/verify-code.php with PATH_INFO: {$subPath}");
+        if (file_exists(__DIR__ . '/api/verify-code.php')) {
+            require __DIR__ . '/api/verify-code.php';
+        } else {
+            error_log("Index: ERROR - verify-code.php not found");
+            http_response_code(500);
+            echo json_encode(['error' => 'verify-code.php not found']);
+            exit;
+        }
+    } elseif (strpos($path, 'api/resend-code') === 0) {
+        $subPath = substr($path, 14);
+        if ($subPath === '') $subPath = '/';
+        $_SERVER['PATH_INFO'] = $subPath;
+        error_log("Index: Routing to api/resend-code.php with PATH_INFO: {$subPath}");
+        if (file_exists(__DIR__ . '/api/resend-code.php')) {
+            require __DIR__ . '/api/resend-code.php';
+        } else {
+            error_log("Index: ERROR - resend-code.php not found");
+            http_response_code(500);
+            echo json_encode(['error' => 'resend-code.php not found']);
             exit;
         }
     } else {

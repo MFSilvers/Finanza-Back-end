@@ -1,6 +1,13 @@
 <?php
 
 function validateOrigin() {
+    // Allow health check endpoints without ALLOWED_ORIGINS
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $uri = parse_url($uri, PHP_URL_PATH) ?: '/';
+    if ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0) {
+        return true;
+    }
+    
     $allowedOrigins = [];
     
     // Get allowed origins from environment variable (comma-separated)
@@ -55,37 +62,46 @@ function validateOrigin() {
 function setCorsHeaders() {
     // Get allowed origins from environment variable (comma-separated)
     $envOrigins = getenv('ALLOWED_ORIGINS');
-    if (empty($envOrigins)) {
+    
+    // Allow health check endpoints without ALLOWED_ORIGINS
+    $uri = $_SERVER['REQUEST_URI'] ?? '/';
+    $uri = parse_url($uri, PHP_URL_PATH) ?: '/';
+    $isHealthCheck = ($uri === '/' || $uri === '/health' || strpos($uri, '/health') === 0);
+    
+    if (empty($envOrigins) && !$isHealthCheck) {
         error_log("Security: ALLOWED_ORIGINS not configured in setCorsHeaders.");
         http_response_code(500);
         header("Content-Type: application/json");
-        echo json_encode(['error' => 'Server configuration error']);
+        echo json_encode(['error' => 'Server configuration error: ALLOWED_ORIGINS not set']);
         exit();
     }
-    $allowedOrigins = array_map('trim', explode(',', $envOrigins));
+    
+    $allowedOrigins = $envOrigins ? array_map('trim', explode(',', $envOrigins)) : [];
     
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $isOptions = $method === 'OPTIONS';
     
-    // Validate origin first
-    if (!validateOrigin()) {
-        http_response_code(403);
-        header("Content-Type: application/json");
-        echo json_encode(['error' => 'Access denied. Invalid origin.']);
-        exit();
-    }
-    
-    // If origin is in allowed list, use it
-    if (in_array($origin, $allowedOrigins)) {
-        header("Access-Control-Allow-Origin: " . $origin);
-        header("Access-Control-Allow-Credentials: true");
-    } elseif (!empty($origin)) {
-        // This shouldn't happen if validateOrigin() works correctly, but as fallback
-        header("Access-Control-Allow-Origin: " . $origin);
-    } else {
-        // No origin header - only allow for health check (already validated)
+    // For health check, allow all origins
+    if ($isHealthCheck) {
         header("Access-Control-Allow-Origin: *");
+    } else {
+        // Validate origin first for non-health-check endpoints
+        if (!validateOrigin()) {
+            http_response_code(403);
+            header("Content-Type: application/json");
+            echo json_encode(['error' => 'Access denied. Invalid origin.']);
+            exit();
+        }
+        
+        // If origin is in allowed list, use it
+        if (in_array($origin, $allowedOrigins)) {
+            header("Access-Control-Allow-Origin: " . $origin);
+            header("Access-Control-Allow-Credentials: true");
+        } elseif (!empty($origin)) {
+            // This shouldn't happen if validateOrigin() works correctly, but as fallback
+            header("Access-Control-Allow-Origin: " . $origin);
+        }
     }
     
     header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -133,6 +149,68 @@ function validateRequired($data, $fields) {
         if (!isset($data[$field]) || empty($data[$field])) {
             sendError("Field '$field' is required", 400);
         }
+    }
+}
+
+function sendVerificationCodeEmail($recipientEmail, $recipientName, $code) {
+    @require_once __DIR__ . '/../load_env.php';
+    
+    if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
+        error_log("Email: vendor/autoload.php not found. Skipping verification email.");
+        return false;
+    }
+    
+    require_once __DIR__ . '/../vendor/autoload.php';
+    
+    $brevoApiKey = $_ENV['BREVO_API_KEY'] ?? getenv('BREVO_API_KEY');
+    $senderEmail = $_ENV['BREVO_SENDER_EMAIL'] ?? getenv('BREVO_SENDER_EMAIL') ?? '';
+    $senderName = $_ENV['BREVO_SENDER_NAME'] ?? getenv('BREVO_SENDER_NAME') ?? 'Finanza App';
+    
+    if (empty($brevoApiKey) || empty($senderEmail)) {
+        error_log("Email: BREVO_API_KEY or BREVO_SENDER_EMAIL not configured. Skipping verification email.");
+        return false;
+    }
+    
+    try {
+        $config = \Brevo\Client\Configuration::getDefaultConfiguration();
+        $config->setApiKey('api-key', $brevoApiKey);
+        
+        $apiInstance = new \Brevo\Client\Api\TransactionalEmailsApi(null, $config);
+        
+        $oldErrorReporting = error_reporting(E_ALL & ~E_DEPRECATED);
+        $sendSmtpEmail = new \Brevo\Client\Model\SendSmtpEmail();
+        error_reporting($oldErrorReporting);
+        
+        $subject = 'Codice di verifica email - Finanza';
+        $htmlMessage = "
+        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;'>
+            <h2 style='color: #4F46E5;'>Verifica la tua email</h2>
+            <p>Ciao <strong>{$recipientName}</strong>,</p>
+            <p>Grazie per esserti registrato! Per completare la registrazione, inserisci il seguente codice di verifica:</p>
+            <div style='background: #F3F4F6; border: 2px solid #4F46E5; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;'>
+                <h1 style='color: #4F46E5; font-size: 36px; letter-spacing: 8px; margin: 0;'>{$code}</h1>
+            </div>
+            <p>Questo codice scade tra <strong>10 minuti</strong>.</p>
+            <p style='color: #6B7280; font-size: 14px; margin-top: 30px;'>Se non hai richiesto questo codice, ignora questa email.</p>
+            <p style='color: #6B7280; font-size: 14px;'>Il team di Finanza</p>
+        </div>
+        ";
+        
+        $textMessage = "Verifica la tua email\n\nCiao {$recipientName},\n\nGrazie per esserti registrato! Per completare la registrazione, inserisci il seguente codice di verifica:\n\n{$code}\n\nQuesto codice scade tra 10 minuti.\n\nSe non hai richiesto questo codice, ignora questa email.\n\nIl team di Finanza";
+        
+        $sendSmtpEmail->setSender(['name' => $senderName, 'email' => $senderEmail]);
+        $sendSmtpEmail->setTo([['email' => $recipientEmail, 'name' => $recipientName]]);
+        $sendSmtpEmail->setSubject($subject);
+        $sendSmtpEmail->setTextContent($textMessage);
+        $sendSmtpEmail->setHtmlContent($htmlMessage);
+        
+        $result = $apiInstance->sendTransacEmail($sendSmtpEmail);
+        
+        error_log("Email: Verification code sent successfully to {$recipientEmail}");
+        return true;
+    } catch (\Exception $e) {
+        error_log("Email: Failed to send verification code to {$recipientEmail} - " . $e->getMessage());
+        return false;
     }
 }
 

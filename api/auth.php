@@ -42,10 +42,23 @@ if ($method === 'POST' && $path === '/register') {
     // Hash password
     $passwordHash = password_hash($data['password'], PASSWORD_DEFAULT);
     
-    // Insert user
-    $stmt = $db->prepare("INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)");
+    // Generate 6-digit verification code
+    $verificationCode = str_pad(rand(100000, 999999), 6, '0', STR_PAD_LEFT);
     
-    if ($stmt->execute([$data['email'], $passwordHash, $data['name']])) {
+    // Calculate expiration time (10 minutes from now)
+    $dbType = getenv('DB_TYPE') ?: 'mysql';
+    if ($dbType === 'pgsql' || $dbType === 'postgres') {
+        // PostgreSQL
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+        $stmt = $db->prepare("INSERT INTO users (email, password_hash, name, email_code, email_verified, email_code_expires_at) VALUES (?, ?, ?, ?, 0, ?)");
+        $stmt->execute([$data['email'], $passwordHash, $data['name'], $verificationCode, $expiresAt]);
+    } else {
+        // MySQL
+        $stmt = $db->prepare("INSERT INTO users (email, password_hash, name, email_code, email_verified, email_code_expires_at) VALUES (?, ?, ?, ?, 0, DATE_ADD(NOW(), INTERVAL 10 MINUTE))");
+        $stmt->execute([$data['email'], $passwordHash, $data['name'], $verificationCode]);
+    }
+    
+    if ($stmt->rowCount() > 0) {
         $userId = $db->lastInsertId();
         
         // Create default categories for new user
@@ -77,17 +90,19 @@ if ($method === 'POST' && $path === '/register') {
         
         $token = JWT::encode($payload);
         
-        // Send welcome email (non-blocking - don't fail registration if email fails)
-        sendWelcomeEmail($data['email'], $data['name']);
+        // Send verification code email (non-blocking - don't fail registration if email fails)
+        sendVerificationCodeEmail($data['email'], $data['name'], $verificationCode);
         
         sendJsonResponse([
-            'message' => 'User registered successfully',
+            'message' => 'User registered successfully. Please verify your email with the code sent to your inbox.',
             'token' => $token,
             'user' => [
                 'id' => $userId,
                 'email' => $data['email'],
-                'name' => $data['name']
-            ]
+                'name' => $data['name'],
+                'email_verified' => false
+            ],
+            'requires_verification' => true
         ], 201);
     } else {
         sendError('Failed to register user', 500);
@@ -101,7 +116,7 @@ elseif ($method === 'POST' && $path === '/login') {
     validateRequired($data, ['email', 'password']);
     
     // Get user by email
-    $stmt = $db->prepare("SELECT id, email, password_hash, name FROM users WHERE email = ?");
+    $stmt = $db->prepare("SELECT id, email, password_hash, name, email_verified FROM users WHERE email = ?");
     $stmt->execute([$data['email']]);
     $user = $stmt->fetch();
     
@@ -112,6 +127,11 @@ elseif ($method === 'POST' && $path === '/login') {
     // Verify password
     if (!password_verify($data['password'], $user['password_hash'])) {
         sendError('Invalid credentials', 401);
+    }
+    
+    // Check if email is verified
+    if (!$user['email_verified']) {
+        sendError('Email not verified. Please verify your email before logging in.', 403);
     }
     
     // Generate JWT token
